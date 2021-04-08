@@ -1,5 +1,3 @@
-
-
 operator fun Number.plus(other: Number): Number {
     return when (this) {
         is Long -> this.toLong() + other.toLong()
@@ -56,7 +54,7 @@ data class Matrix<T : Number>(var rows: Int, var cols: Int, var isInitialize: Bo
         }
     }
 
-    private fun copyFrom(other : Matrix<T>) {
+    private fun copyFrom(other: Matrix<T>) {
         for (i in 0 until rows) {
             for (j in 0 until cols) {
                 array[i][j] = other[i][j]
@@ -75,9 +73,9 @@ data class Matrix<T : Number>(var rows: Int, var cols: Int, var isInitialize: Bo
         return res
     }
 
-    private fun findPowerOfTwo(n : Int) : Int {
+    private fun findPowerOfTwo(n: Int): Int {
         var res = 1
-        while(res < n)
+        while (res < n)
             res *= 2
         return res
     }
@@ -170,7 +168,7 @@ data class Matrix<T : Number>(var rows: Int, var cols: Int, var isInitialize: Bo
     }
 
 
-    private fun splitMatrix() : List<List<Matrix<T>>> {
+    private fun splitMatrix(): List<List<Matrix<T>>> {
         val a11 = getSubMatrix(0, rows / 2, 0, cols / 2)
         val a12 = getSubMatrix(0, rows / 2, cols / 2, cols)
         val a21 = getSubMatrix(rows / 2, rows, 0, cols / 2)
@@ -179,7 +177,7 @@ data class Matrix<T : Number>(var rows: Int, var cols: Int, var isInitialize: Bo
     }
 
     private fun strassen(other: Matrix<T>) {
-        if(rows <= 64) {
+        if (rows <= 64) {
             copyFrom(defaultTimes(other))
             return
         }
@@ -224,14 +222,12 @@ data class Matrix<T : Number>(var rows: Int, var cols: Int, var isInitialize: Bo
         splitRes[1][1].copyFrom(c22)
     }
 
-    operator fun times(other: Matrix<T>) : Matrix<T> {
+    operator fun times(other: Matrix<T>): Matrix<T> {
         assert(cols == other.rows)
         val a = addPadding()
         val b = other.addPadding()
         a.strassen(b)
-        a.rows = rows
-        a.cols = other.cols
-        return a
+        return a.getSubMatrix(0, rows, 0, other.cols)
     }
 }
 
