@@ -76,6 +76,24 @@ class MatrixTest {
         assertTrue(check(a * a, a.defaultTimes(a)))
     }
 
+    @Test
+    fun testStrassenTimes2() {
+        val a = Matrix<Double>(50, 100)
+        val b = Matrix<Double>(100, 50)
+        for(i in 0 until 50) {
+            for(j in 0 until 100) {
+                a[i][j] = (i + j + 42).toDouble()
+            }
+        }
+        for(i in 0 until 100) {
+            for(j in 0 until 50) {
+                b[i][j] = (i - j + 69).toDouble()
+            }
+        }
+        assertTrue(check(a * b, a.defaultTimes(b)))
+    }
+
+
     @ExperimentalTime
     @Test
     fun testSpeed() {
