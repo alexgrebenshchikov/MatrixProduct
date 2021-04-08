@@ -208,7 +208,6 @@ data class Matrix<T : Number>(var rows: Int, var cols: Int, var isInitialize: Bo
         f6.strassen(g6)
         f7.strassen(g7)
 
-        val splitRes = splitMatrix()
 
         val c11 = f1 + f4 - f5 + f7
         val c12 = f3 + f5
@@ -216,10 +215,10 @@ data class Matrix<T : Number>(var rows: Int, var cols: Int, var isInitialize: Bo
         val c22 = f1 - f2 + f3 + f6
 
 
-        splitRes[0][0].copyFrom(c11)
-        splitRes[0][1].copyFrom(c12)
-        splitRes[1][0].copyFrom(c21)
-        splitRes[1][1].copyFrom(c22)
+        splitA[0][0].copyFrom(c11)
+        splitA[0][1].copyFrom(c12)
+        splitA[1][0].copyFrom(c21)
+        splitA[1][1].copyFrom(c22)
     }
 
     operator fun times(other: Matrix<T>): Matrix<T> {
