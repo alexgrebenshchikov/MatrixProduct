@@ -1,3 +1,5 @@
+import kotlin.concurrent.thread
+
 operator fun Number.plus(other: Number): Number {
     return when (this) {
         is Long -> this.toLong() + other.toLong()
@@ -176,7 +178,7 @@ data class Matrix<T : Number>(var rows: Int, var cols: Int, var isInitialize: Bo
         return listOf(listOf(a11, a12), listOf(a21, a22))
     }
 
-    private fun strassen(other: Matrix<T>) {
+    private fun strassen(other: Matrix<T>, isParallel : Boolean = false) {
         if (rows <= 64) {
             copyFrom(defaultTimes(other))
             return
@@ -184,35 +186,47 @@ data class Matrix<T : Number>(var rows: Int, var cols: Int, var isInitialize: Bo
         val splitA = splitMatrix()
         val splitB = other.splitMatrix()
 
-        val f1 = splitA[0][0] + splitA[1][1]
-        val f2 = splitA[1][0] + splitA[1][1]
-        val f3 = splitA[0][0]
-        val f4 = splitA[1][1]
-        val f5 = splitA[0][0] + splitA[0][1]
-        val f6 = splitA[1][0] - splitA[0][0]
-        val f7 = splitA[0][1] - splitA[1][1]
+        val f : MutableList<Matrix<T>> = mutableListOf()
+        val g : MutableList<Matrix<T>> = mutableListOf()
 
-        val g1 = splitB[0][0] + splitB[1][1]
-        val g2 = splitB[0][0]
-        val g3 = splitB[0][1] - splitB[1][1]
-        val g4 = splitB[1][0] - splitB[0][0]
-        val g5 = splitB[1][1]
-        val g6 = splitB[0][0] + splitB[0][1]
-        val g7 = splitB[1][0] + splitB[1][1]
+        f.add(splitA[0][0] + splitA[1][1])
+        f.add(splitA[1][0] + splitA[1][1])
+        f.add(splitA[0][0])
+        f.add(splitA[1][1])
+        f.add(splitA[0][0] + splitA[0][1])
+        f.add(splitA[1][0] - splitA[0][0])
+        f.add(splitA[0][1] - splitA[1][1])
 
-        f1.strassen(g1)
-        f2.strassen(g2)
-        f3.strassen(g3)
-        f4.strassen(g4)
-        f5.strassen(g5)
-        f6.strassen(g6)
-        f7.strassen(g7)
+        g.add(splitB[0][0] + splitB[1][1])
+        g.add(splitB[0][0])
+        g.add(splitB[0][1] - splitB[1][1])
+        g.add(splitB[1][0] - splitB[0][0])
+        g.add(splitB[1][1])
+        g.add(splitB[0][0] + splitB[0][1])
+        g.add(splitB[1][0] + splitB[1][1])
 
+        if(isParallel) {
+            val threadPull : MutableList<Thread> = mutableListOf()
+            for(i in 0 until 7) {
+                threadPull.add(
+                    thread {
+                        f[i].strassen(g[i])
+                    }
+                )
+            }
+            for(i in 0 until 7) {
+                threadPull[i].join()
+            }
+        } else {
+            for(i in 0 until 7) {
+                f[i].strassen(g[i])
+            }
+        }
 
-        val c11 = f1 + f4 - f5 + f7
-        val c12 = f3 + f5
-        val c21 = f2 + f4
-        val c22 = f1 - f2 + f3 + f6
+        val c11 = f[0] + f[3] - f[4] + f[6]
+        val c12 = f[2] + f[4]
+        val c21 = f[1] + f[3]
+        val c22 = f[0] - f[1] + f[2] + f[5]
 
 
         splitA[0][0].copyFrom(c11)
@@ -225,7 +239,7 @@ data class Matrix<T : Number>(var rows: Int, var cols: Int, var isInitialize: Bo
         assert(cols == other.rows)
         val a = addPadding()
         val b = other.addPadding()
-        a.strassen(b)
+        a.strassen(b, true)
         return a.getSubMatrix(0, rows, 0, other.cols)
     }
 }
