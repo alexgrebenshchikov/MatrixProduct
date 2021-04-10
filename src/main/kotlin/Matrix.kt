@@ -1,3 +1,4 @@
+import java.lang.Integer.max
 import kotlin.concurrent.thread
 
 operator fun Number.plus(other: Number): Number {
@@ -44,6 +45,9 @@ data class Matrix<T : Number>(var rows: Int, var cols: Int, var isInitialize: Bo
     @Suppress("Unchecked_cast")
     private val zero: T = 0 as T
 
+    private val minRows = 64 // If number of rows less equal than this value, naive algorithm will be used
+    private val maxRows = 2048 // If number of rows greater equal than this value, sequential algorithm will be used
+
 
     init {
         if (isInitialize) {
@@ -64,8 +68,8 @@ data class Matrix<T : Number>(var rows: Int, var cols: Int, var isInitialize: Bo
         }
     }
 
-    private fun addPadding(): Matrix<T> {
-        val n = findPowerOfTwo(kotlin.math.max(rows, cols))
+    private fun addPadding(maxN : Int): Matrix<T> {
+        val n = findPowerOfTwo(maxN)
         val res = Matrix<T>(n, n)
         for (i in 0 until rows) {
             for (j in 0 until cols) {
@@ -178,7 +182,7 @@ data class Matrix<T : Number>(var rows: Int, var cols: Int, var isInitialize: Bo
         return listOf(listOf(a11, a12), listOf(a21, a22))
     }
 
-    private fun copyMatrix() : Matrix<T> {
+    private fun copyMatrix(): Matrix<T> {
         val res = Matrix<T>(rows, cols)
         for (i in 0 until rows) {
             for (j in 0 until cols) {
@@ -189,16 +193,37 @@ data class Matrix<T : Number>(var rows: Int, var cols: Int, var isInitialize: Bo
     }
 
 
-    private fun strassen(other: Matrix<T>, isParallel : Boolean = false) {
-        if (rows <= 64) {
+    private fun writeAnswer(splitA: List<List<Matrix<T>>>, f: List<Matrix<T>>) {
+        splitA[0][0].copyFrom(f[0])
+        splitA[0][0] += f[3]
+        splitA[0][0] -= f[4]
+        splitA[0][0] += f[6]
+
+        splitA[0][1].copyFrom(f[2])
+        splitA[0][1] += f[4]
+
+        splitA[1][0].copyFrom(f[1])
+        splitA[1][0] += f[3]
+
+        splitA[1][1].copyFrom(f[0])
+        splitA[1][1] -= f[1]
+        splitA[1][1] += f[2]
+        splitA[1][1] += f[5]
+    }
+
+    /**
+     * This version of algorithm uses more memory, but recursive calls run parallel
+     */
+    private fun strassen(other: Matrix<T>) {
+        if (rows <= minRows) {
             copyFrom(defaultTimes(other))
             return
         }
         val splitA = splitMatrix()
         val splitB = other.splitMatrix()
 
-        val f : MutableList<Matrix<T>> = mutableListOf()
-        val g : MutableList<Matrix<T>> = mutableListOf()
+        val f: MutableList<Matrix<T>> = mutableListOf()
+        val g: MutableList<Matrix<T>> = mutableListOf()
 
         f.add(splitA[0][0] + splitA[1][1])
         f.add(splitA[1][0] + splitA[1][1])
@@ -218,47 +243,72 @@ data class Matrix<T : Number>(var rows: Int, var cols: Int, var isInitialize: Bo
         splitB[1][0] += splitB[1][1]
         g.add(splitB[1][0])
 
-        if(isParallel) {
-            val threadPull : MutableList<Thread> = mutableListOf()
-            for(i in 0 until 7) {
-                threadPull.add(
-                    thread {
-                        f[i].strassen(g[i])
-                    }
-                )
-            }
-            for(i in 0 until 7) {
-                threadPull[i].join()
-            }
-        } else {
-            for(i in 0 until 7) {
-                f[i].strassen(g[i])
-            }
+
+        val threadPull: MutableList<Thread> = mutableListOf()
+        for (i in 0 until 7) {
+            threadPull.add(
+                thread {
+                    f[i].strassen2(g[i])
+                }
+            )
+        }
+        for (i in 0 until 7) {
+            threadPull[i].join()
         }
 
-        splitA[0][0].copyFrom(f[0])
-        splitA[0][0] += f[3]
-        splitA[0][0] -= f[4]
-        splitA[0][0] += f[6]
+        writeAnswer(splitA, f)
+    }
 
-        splitA[0][1].copyFrom(f[2])
-        splitA[0][1] += f[4]
+    /**
+     * This version of algorithm uses less memory, but recursive calls run sequentially
+     */
+    private fun strassen2(other: Matrix<T>) {
+        if (rows <= minRows) {
+            copyFrom(defaultTimes(other))
+            return
+        }
+        val splitA = splitMatrix()
+        val splitB = other.splitMatrix()
 
-        splitA[1][0].copyFrom(f[1])
-        splitA[1][0] += f[3]
+        val f: MutableList<Matrix<T>> = mutableListOf()
 
-        splitA[1][1].copyFrom(f[0])
-        splitA[1][1] -= f[1]
-        splitA[1][1] += f[2]
-        splitA[1][1] += f[5]
+
+        f.add(splitA[0][0] + splitA[1][1])
+        f[0].strassen2(splitB[0][0] + splitB[1][1])
+
+
+        f.add(splitA[1][0] + splitA[1][1])
+        f[1].strassen2(splitB[0][0])
+
+        f.add(splitA[0][0].copyMatrix())
+        f[2].strassen2(splitB[0][1] - splitB[1][1])
+
+        f.add(splitA[1][1].copyMatrix())
+        f[3].strassen2(splitB[1][0] - splitB[0][0])
+
+        f.add(splitA[0][0] + splitA[0][1])
+        f[4].strassen2(splitB[1][1])
+
+        f.add(splitA[1][0] - splitA[0][0])
+        f[5].strassen2(splitB[0][0] + splitB[0][1])
+
+        f.add(splitA[0][1] - splitA[1][1])
+        f[6].strassen2(splitB[1][0] + splitB[1][1])
+
+
+        writeAnswer(splitA, f)
     }
 
 
     operator fun times(other: Matrix<T>): Matrix<T> {
         assert(cols == other.rows)
-        val a = addPadding()
-        val b = other.addPadding()
-        a.strassen(b, true)
+        val maxN = max(max(rows, cols), other.cols)
+        val a = addPadding(maxN)
+        val b = other.addPadding(maxN)
+        if(a.rows >= maxRows)
+            a.strassen2(b)
+        else
+            a.strassen(b)
         return a.getSubMatrix(0, rows, 0, other.cols)
     }
 }
