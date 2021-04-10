@@ -178,6 +178,17 @@ data class Matrix<T : Number>(var rows: Int, var cols: Int, var isInitialize: Bo
         return listOf(listOf(a11, a12), listOf(a21, a22))
     }
 
+    private fun copyMatrix() : Matrix<T> {
+        val res = Matrix<T>(rows, cols)
+        for (i in 0 until rows) {
+            for (j in 0 until cols) {
+                res[i][j] = array[i][j]
+            }
+        }
+        return res
+    }
+
+
     private fun strassen(other: Matrix<T>, isParallel : Boolean = false) {
         if (rows <= 64) {
             copyFrom(defaultTimes(other))
@@ -191,8 +202,8 @@ data class Matrix<T : Number>(var rows: Int, var cols: Int, var isInitialize: Bo
 
         f.add(splitA[0][0] + splitA[1][1])
         f.add(splitA[1][0] + splitA[1][1])
-        f.add(splitA[0][0])
-        f.add(splitA[1][1])
+        f.add(splitA[0][0].copyMatrix())
+        f.add(splitA[1][1].copyMatrix())
         f.add(splitA[0][0] + splitA[0][1])
         f.add(splitA[1][0] - splitA[0][0])
         f.add(splitA[0][1] - splitA[1][1])
@@ -202,8 +213,10 @@ data class Matrix<T : Number>(var rows: Int, var cols: Int, var isInitialize: Bo
         g.add(splitB[0][1] - splitB[1][1])
         g.add(splitB[1][0] - splitB[0][0])
         g.add(splitB[1][1])
-        g.add(splitB[0][0] + splitB[0][1])
-        g.add(splitB[1][0] + splitB[1][1])
+        splitB[0][1] += splitB[0][0]
+        g.add(splitB[0][1])
+        splitB[1][0] += splitB[1][1]
+        g.add(splitB[1][0])
 
         if(isParallel) {
             val threadPull : MutableList<Thread> = mutableListOf()
@@ -223,17 +236,23 @@ data class Matrix<T : Number>(var rows: Int, var cols: Int, var isInitialize: Bo
             }
         }
 
-        val c11 = f[0] + f[3] - f[4] + f[6]
-        val c12 = f[2] + f[4]
-        val c21 = f[1] + f[3]
-        val c22 = f[0] - f[1] + f[2] + f[5]
+        splitA[0][0].copyFrom(f[0])
+        splitA[0][0] += f[3]
+        splitA[0][0] -= f[4]
+        splitA[0][0] += f[6]
 
+        splitA[0][1].copyFrom(f[2])
+        splitA[0][1] += f[4]
 
-        splitA[0][0].copyFrom(c11)
-        splitA[0][1].copyFrom(c12)
-        splitA[1][0].copyFrom(c21)
-        splitA[1][1].copyFrom(c22)
+        splitA[1][0].copyFrom(f[1])
+        splitA[1][0] += f[3]
+
+        splitA[1][1].copyFrom(f[0])
+        splitA[1][1] -= f[1]
+        splitA[1][1] += f[2]
+        splitA[1][1] += f[5]
     }
+
 
     operator fun times(other: Matrix<T>): Matrix<T> {
         assert(cols == other.rows)
