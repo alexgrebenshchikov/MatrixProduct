@@ -107,12 +107,12 @@ class MatrixTest {
         val duration1 = measureTime {
             val b = a.defaultTimes(a)
         }
-        println("Time defaultTimes: ${duration1.inMilliseconds} ms\n")
+        println("testSpeed - Time defaultTimes: ${duration1.inMilliseconds} ms\n")
 
         val duration2 = measureTime {
             val b = a * a
         }
-        println("Time strassenTimes: ${duration2.inMilliseconds} ms\n")
+        println("testSpeed - Time strassenTimes: ${duration2.inMilliseconds} ms\n")
     }
 
     @ExperimentalTime
@@ -129,7 +129,7 @@ class MatrixTest {
         val duration2 = measureTime {
             val b = a * a
         }
-        println("Time strassenTimes 2: ${duration2.inMilliseconds} ms\n")
+        println("testSpeed2 - Time strassenTimes 2: ${duration2.inMilliseconds} ms\n")
     }
 
 }
