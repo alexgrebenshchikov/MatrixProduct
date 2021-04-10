@@ -79,7 +79,7 @@ class MatrixTest {
     @Test
     fun testStrassenTimes2() {
         val a = Matrix<Double>(50, 100)
-        val b = Matrix<Double>(100, 50)
+        val b = Matrix<Double>(100, 200)
         for(i in 0 until 50) {
             for(j in 0 until 100) {
                 a[i][j] = (i + j + 42).toDouble()
@@ -113,6 +113,23 @@ class MatrixTest {
             val b = a * a
         }
         println("Time strassenTimes: ${duration2.inMilliseconds} ms\n")
+    }
+
+    @ExperimentalTime
+    @Test
+    fun testSpeed2() {
+        val n = 2000
+        val a = Matrix<Double>(n, n)
+        for(i in 0 until n) {
+            for(j in 0 until n) {
+                a[i][j] = (i + j).toDouble()
+            }
+        }
+
+        val duration2 = measureTime {
+            val b = a * a
+        }
+        println("Time strassenTimes 2: ${duration2.inMilliseconds} ms\n")
     }
 
 }
